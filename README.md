@@ -12,9 +12,16 @@ Run the setup scripts in order:
 -- 2. Create semantic view
 @setup/02_create_semantic_view.sql
 
--- 3. Create Cortex Agent
+-- 3. Create Cortex Agent (deploys to Snowflake Intelligence)
 @setup/03_create_agent.sql
 ```
+
+## Access the Agent
+
+After setup, access the agent in Snowsight:
+1. Navigate to **AI & ML > Snowflake Intelligence**
+2. Select **Retail Analytics Assistant**
+3. Start asking questions!
 
 ## What's Included
 
@@ -27,17 +34,23 @@ Run the setup scripts in order:
 | `ORDERS` | Table | `JACK.DEMO` | 20 orders with various statuses |
 | `ORDER_ITEMS` | Table | `JACK.DEMO` | 30 line items |
 | `RETAIL_ANALYTICS_SV` | Semantic View | `JACK.DEMO` | Natural language query interface |
-| `RETAIL_ANALYTICS_AGENT` | Cortex Agent | `JACK.DEMO` | AI assistant for data questions |
+| `RETAIL_ANALYTICS_AGENT` | Cortex Agent | `SNOWFLAKE_INTELLIGENCE.AGENTS` | AI assistant (Snowflake Intelligence) |
 | `GITHUB_PAT_SECRET` | Secret | `JACK.DEMO` | GitHub credentials |
 | `GITHUB_API_INTEGRATION` | API Integration | Account | Git connectivity |
 | `COCO_DEMO_REPO` | Git Repository | `JACK.DEMO` | Synced repo clone |
 
 ### Demo Capabilities
 
-#### 1. Semantic View + Cortex Analyst
-Ask natural language questions about the data:
+#### 1. Snowflake Intelligence Agent
+The agent is deployed to Snowflake Intelligence and can answer questions like:
+- "Who are the top 5 customers by revenue?"
+- "What is revenue by product category?"
+- "How many orders are pending?"
+- "Which state has the most customers?"
+
+#### 2. Semantic View + Cortex Analyst
+Query the semantic view directly:
 ```sql
--- Example: Query the semantic view directly
 SELECT * FROM SEMANTIC_VIEW(
   JACK.DEMO.RETAIL_ANALYTICS_SV
   METRICS (order_items.total_revenue)
@@ -45,14 +58,7 @@ SELECT * FROM SEMANTIC_VIEW(
 );
 ```
 
-#### 2. Cortex Agent
-The agent can answer questions like:
-- "Who are the top 5 customers by revenue?"
-- "What is revenue by product category?"
-- "How many orders are pending?"
-- "Which state has the most customers?"
-
-#### 3. Streamlit App
+#### 3. Streamlit App (Optional)
 A chat interface that connects to the Cortex Agent for interactive data exploration.
 
 ## Repository Structure
@@ -63,9 +69,9 @@ coco-demo/
 ├── setup/
 │   ├── 01_create_sample_data.sql       # Tables with sample data
 │   ├── 02_create_semantic_view.sql     # Semantic view definition
-│   └── 03_create_agent.sql             # Cortex Agent definition
+│   └── 03_create_agent.sql             # Cortex Agent for Snowflake Intelligence
 └── streamlit/
-    └── retail_analytics_app.py         # Chat app using Cortex Agent
+    └── retail_analytics_app.py         # Optional chat app
 ```
 
 ## Git Integration Setup
@@ -105,10 +111,10 @@ CREATE OR REPLACE GIT REPOSITORY JACK.DEMO.coco_demo_repo
 ## Demo Flow
 
 ```
-┌─────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│ Sample Data │ -> │ Semantic View│ -> │ Cortex Agent │ -> │ Streamlit App│
-└─────────────┘    └──────────────┘    └──────────────┘    └──────────────┘
-     Tables           Text-to-SQL        AI Assistant       Chat Interface
+┌─────────────┐    ┌──────────────┐    ┌──────────────────────────┐
+│ Sample Data │ -> │ Semantic View│ -> │ Snowflake Intelligence   │
+│   Tables    │    │  Text-to-SQL │    │   AI & ML > Intelligence │
+└─────────────┘    └──────────────┘    └──────────────────────────┘
 ```
 
 ## What CoCo Can Demo
@@ -116,7 +122,7 @@ CREATE OR REPLACE GIT REPOSITORY JACK.DEMO.coco_demo_repo
 | Category | Feature | Description |
 |----------|---------|-------------|
 | **AI** | Semantic View | Natural language to SQL via Cortex Analyst |
-| **AI** | Cortex Agent | Multi-tool AI orchestration |
+| **AI** | Snowflake Intelligence | Agent accessible in Snowsight UI |
 | **Apps** | Streamlit | Build data apps conversationally |
 | **Data Eng** | Dynamic Tables | Pipeline creation from descriptions |
 | **DevOps** | Git Integration | Commit, push, PR from CoCo |

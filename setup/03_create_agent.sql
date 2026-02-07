@@ -1,9 +1,16 @@
--- Retail Analytics Cortex Agent
--- Creates an AI agent that can answer natural language questions about retail data
+-- Retail Analytics Cortex Agent for Snowflake Intelligence
+-- Creates an AI agent accessible via AI & ML > Snowflake Intelligence in Snowsight
 
-CREATE OR REPLACE AGENT JACK.DEMO.RETAIL_ANALYTICS_AGENT
+-- Setup Snowflake Intelligence database/schema (one-time)
+CREATE DATABASE IF NOT EXISTS SNOWFLAKE_INTELLIGENCE;
+GRANT USAGE ON DATABASE SNOWFLAKE_INTELLIGENCE TO ROLE PUBLIC;
+CREATE SCHEMA IF NOT EXISTS SNOWFLAKE_INTELLIGENCE.AGENTS;
+GRANT USAGE ON SCHEMA SNOWFLAKE_INTELLIGENCE.AGENTS TO ROLE PUBLIC;
+
+-- Create the agent
+CREATE OR REPLACE AGENT SNOWFLAKE_INTELLIGENCE.AGENTS.RETAIL_ANALYTICS_AGENT
   COMMENT = 'AI assistant for retail analytics - answers questions about customers, products, and sales'
-  PROFILE = '{"display_name": "Retail Analytics Assistant", "avatar": "shopping-cart"}'
+  PROFILE = '{"display_name": "Retail Analytics Assistant"}'
   FROM SPECIFICATION $$
   {
     "models": {
@@ -35,5 +42,5 @@ CREATE OR REPLACE AGENT JACK.DEMO.RETAIL_ANALYTICS_AGENT
   }
   $$;
 
--- Grant usage to appropriate roles
--- GRANT USAGE ON AGENT JACK.DEMO.RETAIL_ANALYTICS_AGENT TO ROLE <your_role>;
+-- Grant access to all users
+GRANT USAGE ON AGENT SNOWFLAKE_INTELLIGENCE.AGENTS.RETAIL_ANALYTICS_AGENT TO ROLE PUBLIC;
