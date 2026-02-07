@@ -14,6 +14,12 @@ Run the setup scripts in order:
 
 -- 3. Create Cortex Agent (deploys to Snowflake Intelligence)
 @setup/03_create_agent.sql
+
+-- 4. Create Dynamic Table for real-time metrics
+@setup/04_create_dynamic_table.sql
+
+-- 5. Create Cortex Search for RAG
+@setup/05_create_cortex_search.sql
 ```
 
 ## Access the Agent
@@ -22,6 +28,11 @@ After setup, access the agent in Snowsight:
 1. Navigate to **AI & ML > Snowflake Intelligence**
 2. Select **Retail Analytics Assistant**
 3. Start asking questions!
+
+**Try these examples:**
+- *Structured data:* "Who are the top 5 customers by revenue?"
+- *Unstructured FAQs:* "What is your return policy?"
+- *Combined (RAG):* "What features does the smart watch have, and how many have we sold?"
 
 ## What's Included
 
@@ -33,32 +44,48 @@ After setup, access the agent in Snowsight:
 | `PRODUCTS` | Table | `JACK.DEMO` | 10 products across 5 categories |
 | `ORDERS` | Table | `JACK.DEMO` | 20 orders with various statuses |
 | `ORDER_ITEMS` | Table | `JACK.DEMO` | 30 line items |
+| `PRODUCT_FAQS` | Table | `JACK.DEMO` | 20 FAQs for RAG |
 | `RETAIL_ANALYTICS_SV` | Semantic View | `JACK.DEMO` | Natural language query interface |
-| `RETAIL_ANALYTICS_AGENT` | Cortex Agent | `SNOWFLAKE_INTELLIGENCE.AGENTS` | AI assistant (Snowflake Intelligence) |
+| `REVENUE_METRICS` | Dynamic Table | `JACK.DEMO` | Real-time revenue aggregations (1 min lag) |
+| `PRODUCT_FAQ_SEARCH` | Cortex Search | `JACK.DEMO` | Semantic search on FAQs |
+| `RETAIL_ANALYTICS_AGENT` | Cortex Agent | `SNOWFLAKE_INTELLIGENCE.AGENTS` | RAG-enabled AI assistant |
 | `GITHUB_PAT_SECRET` | Secret | `JACK.DEMO` | GitHub credentials |
 | `GITHUB_API_INTEGRATION` | API Integration | Account | Git connectivity |
 | `COCO_DEMO_REPO` | Git Repository | `JACK.DEMO` | Synced repo clone |
 
 ### Demo Capabilities
 
-#### 1. Snowflake Intelligence Agent
-The agent is deployed to Snowflake Intelligence and can answer questions like:
-- "Who are the top 5 customers by revenue?"
-- "What is revenue by product category?"
-- "How many orders are pending?"
-- "Which state has the most customers?"
+#### 1. RAG-Enabled Agent (Snowflake Intelligence)
+The agent combines **Cortex Analyst** (structured data) + **Cortex Search** (unstructured FAQs):
+- Query sales data: "What is revenue by category?"
+- Search FAQs: "How do I clean the yoga mat?"
+- Combined queries: "What are the specs of our top selling product?"
 
-#### 2. Semantic View + Cortex Analyst
-Query the semantic view directly:
+#### 2. Dynamic Table Pipeline
+Real-time aggregations that auto-refresh:
 ```sql
-SELECT * FROM SEMANTIC_VIEW(
-  JACK.DEMO.RETAIL_ANALYTICS_SV
-  METRICS (order_items.total_revenue)
-  DIMENSIONS (products.category)
+SELECT * FROM JACK.DEMO.REVENUE_METRICS
+WHERE profit_margin_pct > 60
+ORDER BY revenue DESC;
+```
+
+#### 3. Cortex Search Service
+Semantic search on product documentation:
+```sql
+SELECT SNOWFLAKE.CORTEX.SEARCH_PREVIEW(
+  'JACK.DEMO.PRODUCT_FAQ_SEARCH',
+  '{"query": "warranty policy", "columns": ["question", "answer"], "limit": 3}'
 );
 ```
 
-#### 3. Streamlit App (Optional)
+#### 4. Analysis Notebook
+Interactive data exploration with Altair visualizations:
+- Revenue by category charts
+- Top customers analysis
+- Monthly trends
+- Profit margin comparisons
+
+#### 5. Streamlit App (Optional)
 A chat interface that connects to the Cortex Agent for interactive data exploration.
 
 ## Repository Structure
@@ -69,9 +96,42 @@ coco-demo/
 ├── setup/
 │   ├── 01_create_sample_data.sql       # Tables with sample data
 │   ├── 02_create_semantic_view.sql     # Semantic view definition
-│   └── 03_create_agent.sql             # Cortex Agent for Snowflake Intelligence
+│   ├── 03_create_agent.sql             # RAG-enabled Cortex Agent
+│   ├── 04_create_dynamic_table.sql     # Real-time revenue metrics
+│   └── 05_create_cortex_search.sql     # FAQs + Cortex Search Service
+├── notebooks/
+│   └── retail_analysis.ipynb           # Data visualization notebook
 └── streamlit/
     └── retail_analytics_app.py         # Optional chat app
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Snowflake Intelligence                          │
+│                     RETAIL_ANALYTICS_AGENT (RAG)                        │
+│   ┌─────────────────────────┐    ┌─────────────────────────┐           │
+│   │    Cortex Analyst       │    │    Cortex Search        │           │
+│   │   (Structured Data)     │    │  (Unstructured FAQs)    │           │
+│   └───────────┬─────────────┘    └───────────┬─────────────┘           │
+└───────────────┼──────────────────────────────┼─────────────────────────┘
+                │                              │
+    ┌───────────▼───────────┐      ┌───────────▼───────────┐
+    │   Semantic View       │      │   PRODUCT_FAQ_SEARCH  │
+    │ RETAIL_ANALYTICS_SV   │      │   20 searchable FAQs  │
+    └───────────┬───────────┘      └───────────────────────┘
+                │
+    ┌───────────▼───────────────────────────────┐
+    │            Base Tables                     │
+    │  CUSTOMERS | PRODUCTS | ORDERS | ITEMS    │
+    └───────────┬───────────────────────────────┘
+                │
+    ┌───────────▼───────────┐
+    │    Dynamic Table      │
+    │   REVENUE_METRICS     │
+    │  (auto-refresh 1min)  │
+    └───────────────────────┘
 ```
 
 ## Git Integration Setup
@@ -108,23 +168,17 @@ CREATE OR REPLACE GIT REPOSITORY JACK.DEMO.coco_demo_repo
 5. Choose **Personal access token** → `JACK.DEMO.GITHUB_PAT_SECRET`
 6. Click **Create**
 
-## Demo Flow
-
-```
-┌─────────────┐    ┌──────────────┐    ┌──────────────────────────┐
-│ Sample Data │ -> │ Semantic View│ -> │ Snowflake Intelligence   │
-│   Tables    │    │  Text-to-SQL │    │   AI & ML > Intelligence │
-└─────────────┘    └──────────────┘    └──────────────────────────┘
-```
-
 ## What CoCo Can Demo
 
 | Category | Feature | Description |
 |----------|---------|-------------|
 | **AI** | Semantic View | Natural language to SQL via Cortex Analyst |
+| **AI** | Cortex Search | Semantic search on unstructured content |
+| **AI** | RAG Agent | Multi-tool agent combining structured + unstructured |
 | **AI** | Snowflake Intelligence | Agent accessible in Snowsight UI |
 | **Apps** | Streamlit | Build data apps conversationally |
-| **Data Eng** | Dynamic Tables | Pipeline creation from descriptions |
+| **Apps** | Notebooks | Create visualizations with Altair |
+| **Data Eng** | Dynamic Tables | Real-time pipeline creation |
 | **DevOps** | Git Integration | Commit, push, PR from CoCo |
 | **Governance** | RBAC | Role and grant configuration |
 | **Cost** | FinOps | Credit consumption analysis |

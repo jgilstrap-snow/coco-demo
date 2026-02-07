@@ -1,5 +1,6 @@
 -- Retail Analytics Cortex Agent for Snowflake Intelligence
--- Creates an AI agent accessible via AI & ML > Snowflake Intelligence in Snowsight
+-- Creates an AI agent with RAG capabilities (structured + unstructured data)
+-- Accessible via AI & ML > Snowflake Intelligence in Snowsight
 
 -- Setup Snowflake Intelligence database/schema (one-time)
 CREATE DATABASE IF NOT EXISTS SNOWFLAKE_INTELLIGENCE;
@@ -7,9 +8,9 @@ GRANT USAGE ON DATABASE SNOWFLAKE_INTELLIGENCE TO ROLE PUBLIC;
 CREATE SCHEMA IF NOT EXISTS SNOWFLAKE_INTELLIGENCE.AGENTS;
 GRANT USAGE ON SCHEMA SNOWFLAKE_INTELLIGENCE.AGENTS TO ROLE PUBLIC;
 
--- Create the agent
+-- Create the RAG-enabled agent with two tools
 CREATE OR REPLACE AGENT SNOWFLAKE_INTELLIGENCE.AGENTS.RETAIL_ANALYTICS_AGENT
-  COMMENT = 'AI assistant for retail analytics - answers questions about customers, products, and sales'
+  COMMENT = 'AI assistant for retail analytics - answers questions about data AND product FAQs'
   PROFILE = '{"display_name": "Retail Analytics Assistant"}'
   FROM SPECIFICATION $$
   {
@@ -17,15 +18,22 @@ CREATE OR REPLACE AGENT SNOWFLAKE_INTELLIGENCE.AGENTS.RETAIL_ANALYTICS_AGENT
       "orchestration": "claude-4-sonnet"
     },
     "instructions": {
-      "orchestration": "Use the retail_analyst tool to answer questions about sales, customers, products, and orders. Always query the data before responding.",
-      "response": "Be concise and data-driven. Present numbers clearly. If asked for trends or comparisons, highlight key insights."
+      "orchestration": "You have two tools: 1) retail_analyst for sales/customer/order data questions (revenue, trends, metrics), 2) product_faqs for product information, policies, returns, shipping, features. Use the appropriate tool based on the question. For questions mixing both (e.g., 'what are the features of our top selling product'), use both tools.",
+      "response": "Be concise and helpful. For data questions, present numbers clearly. For FAQ questions, provide complete answers from the search results."
     },
     "tools": [
       {
         "tool_spec": {
           "type": "cortex_analyst_text_to_sql",
           "name": "retail_analyst",
-          "description": "Query retail data including customers, products, orders, and sales metrics. Use for questions about revenue, top customers, product categories, order trends, and customer segments."
+          "description": "Query structured retail data: customers, products, orders, revenue, trends. Use for questions about sales metrics, top customers, order status, revenue by category, customer segments."
+        }
+      },
+      {
+        "tool_spec": {
+          "type": "cortex_search",
+          "name": "product_faqs",
+          "description": "Search product FAQs, policies, and documentation. Use for questions about product features, specifications, warranty, returns, shipping, care instructions, and store policies."
         }
       }
     ],
@@ -37,6 +45,11 @@ CREATE OR REPLACE AGENT SNOWFLAKE_INTELLIGENCE.AGENTS.RETAIL_ANALYTICS_AGENT
           "warehouse": "AICOLLEGE"
         },
         "query_timeout": 60
+      },
+      "product_faqs": {
+        "search_service": "JACK.DEMO.PRODUCT_FAQ_SEARCH",
+        "max_results": 5,
+        "columns": ["category", "question", "answer"]
       }
     }
   }
