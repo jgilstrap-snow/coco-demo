@@ -2,34 +2,79 @@
 
 A showcase repository demonstrating Snowflake's AI-powered coding assistant capabilities for SE teams.
 
-## Overview
+## Quick Start
 
-This repository contains demo collateral for showcasing Cortex Code features including:
-- Natural language to SQL
-- Semantic view and Cortex Agent creation
-- Streamlit app development
-- Git integration workflows
-- And more...
+Run the setup scripts in order:
+```sql
+-- 1. Create sample data
+@setup/01_create_sample_data.sql
 
-## Snowflake Setup
+-- 2. Create semantic view
+@setup/02_create_semantic_view.sql
 
-### Objects Created
+-- 3. Create Cortex Agent
+@setup/03_create_agent.sql
+```
 
-| Object | Type | Location |
-|--------|------|----------|
-| `GITHUB_PAT_SECRET` | Secret | `JACK.DEMO` |
-| `GITHUB_API_INTEGRATION` | API Integration | Account |
-| `COCO_DEMO_REPO` | Git Repository | `JACK.DEMO` |
+## What's Included
 
-### Setup SQL
+### Snowflake Objects Created
+
+| Object | Type | Location | Description |
+|--------|------|----------|-------------|
+| `CUSTOMERS` | Table | `JACK.DEMO` | 10 sample customers |
+| `PRODUCTS` | Table | `JACK.DEMO` | 10 products across 5 categories |
+| `ORDERS` | Table | `JACK.DEMO` | 20 orders with various statuses |
+| `ORDER_ITEMS` | Table | `JACK.DEMO` | 30 line items |
+| `RETAIL_ANALYTICS_SV` | Semantic View | `JACK.DEMO` | Natural language query interface |
+| `RETAIL_ANALYTICS_AGENT` | Cortex Agent | `JACK.DEMO` | AI assistant for data questions |
+| `GITHUB_PAT_SECRET` | Secret | `JACK.DEMO` | GitHub credentials |
+| `GITHUB_API_INTEGRATION` | API Integration | Account | Git connectivity |
+| `COCO_DEMO_REPO` | Git Repository | `JACK.DEMO` | Synced repo clone |
+
+### Demo Capabilities
+
+#### 1. Semantic View + Cortex Analyst
+Ask natural language questions about the data:
+```sql
+-- Example: Query the semantic view directly
+SELECT * FROM SEMANTIC_VIEW(
+  JACK.DEMO.RETAIL_ANALYTICS_SV
+  METRICS (order_items.total_revenue)
+  DIMENSIONS (products.category)
+);
+```
+
+#### 2. Cortex Agent
+The agent can answer questions like:
+- "Who are the top 5 customers by revenue?"
+- "What is revenue by product category?"
+- "How many orders are pending?"
+- "Which state has the most customers?"
+
+#### 3. Streamlit App
+A chat interface that connects to the Cortex Agent for interactive data exploration.
+
+## Repository Structure
+
+```
+coco-demo/
+├── README.md                           # This file
+├── setup/
+│   ├── 01_create_sample_data.sql       # Tables with sample data
+│   ├── 02_create_semantic_view.sql     # Semantic view definition
+│   └── 03_create_agent.sql             # Cortex Agent definition
+└── streamlit/
+    └── retail_analytics_app.py         # Chat app using Cortex Agent
+```
+
+## Git Integration Setup
+
+### Objects for Git Connectivity
 
 ```sql
-USE ROLE SYSADMIN;
-USE DATABASE JACK;
-USE SCHEMA DEMO;
-
 -- 1. Create secret for GitHub credentials
-CREATE OR REPLACE SECRET github_pat_secret
+CREATE OR REPLACE SECRET JACK.DEMO.github_pat_secret
   TYPE = PASSWORD
   USERNAME = '<github-username>'
   PASSWORD = '<github-pat>';
@@ -37,14 +82,14 @@ CREATE OR REPLACE SECRET github_pat_secret
 -- 2. Create API integration for GitHub
 CREATE OR REPLACE API INTEGRATION github_api_integration
   API_PROVIDER = git_https_api
-  API_ALLOWED_PREFIXES = ('https://github.com/<your-org>')
+  API_ALLOWED_PREFIXES = ('https://github.com/jgilstrap-snow')
   ALLOWED_AUTHENTICATION_SECRETS = (JACK.DEMO.github_pat_secret)
   ENABLED = TRUE;
 
 -- 3. Create Git repository clone
-CREATE OR REPLACE GIT REPOSITORY coco_demo_repo
+CREATE OR REPLACE GIT REPOSITORY JACK.DEMO.coco_demo_repo
   API_INTEGRATION = github_api_integration
-  GIT_CREDENTIALS = github_pat_secret
+  GIT_CREDENTIALS = JACK.DEMO.github_pat_secret
   ORIGIN = 'https://github.com/jgilstrap-snow/coco-demo.git';
 ```
 
@@ -57,41 +102,26 @@ CREATE OR REPLACE GIT REPOSITORY coco_demo_repo
 5. Choose **Personal access token** → `JACK.DEMO.GITHUB_PAT_SECRET`
 6. Click **Create**
 
-## Demo Scenarios
-
-### Recommended Flow
+## Demo Flow
 
 ```
-Sample Data → Semantic View → Cortex Agent → Streamlit App → Test → Commit
+┌─────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│ Sample Data │ -> │ Semantic View│ -> │ Cortex Agent │ -> │ Streamlit App│
+└─────────────┘    └──────────────┘    └──────────────┘    └──────────────┘
+     Tables           Text-to-SQL        AI Assistant       Chat Interface
 ```
 
-### Categories
+## What CoCo Can Demo
 
-| Category | Demo | Description |
-|----------|------|-------------|
-| **AI** | Semantic View + Agent | Build conversational analytics |
-| **Apps** | Streamlit | Create data apps with natural language |
-| **Data Eng** | Dynamic Tables | Build pipelines from descriptions |
-| **DevOps** | Git Workflow | Commit and PR from CoCo |
-| **Governance** | RBAC & Cost | Security and FinOps insights |
-
-## Repository Structure
-
-```
-coco-demo/
-├── README.md
-├── setup/                 # SQL setup scripts
-├── semantic/              # Semantic views and models
-├── agents/                # Cortex Agent definitions
-├── streamlit/             # Streamlit applications
-└── notebooks/             # Jupyter notebooks
-```
-
-## Getting Started
-
-1. Ensure Git integration is configured (see Setup SQL above)
-2. Create a workspace from this repository
-3. Follow demo scenarios in order or pick specific features to showcase
+| Category | Feature | Description |
+|----------|---------|-------------|
+| **AI** | Semantic View | Natural language to SQL via Cortex Analyst |
+| **AI** | Cortex Agent | Multi-tool AI orchestration |
+| **Apps** | Streamlit | Build data apps conversationally |
+| **Data Eng** | Dynamic Tables | Pipeline creation from descriptions |
+| **DevOps** | Git Integration | Commit, push, PR from CoCo |
+| **Governance** | RBAC | Role and grant configuration |
+| **Cost** | FinOps | Credit consumption analysis |
 
 ---
 
